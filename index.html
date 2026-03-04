@@ -2243,11 +2243,13 @@ function SpaceBackground({onSelect,onZoom}){
       const wp0=WAYPOINTS[0];
       cinemaLabel=wp0.lbl;cinemaSub=wp0.sub||'';cinemaLabelAlpha=0;cinemaColor=wp0.colr||'#ffffff';
       cinBtn.textContent='■  STOP';cinBtn.style.background='rgba(160,25,18,.78)';
+      window.dispatchEvent(new CustomEvent('cinematicChange',{detail:{active:true}}));
     };
     const stopCinema=()=>{
       cinemaActive=false;
       tgt.r=cur.r;tgt.t=cur.t;tgt.p=cur.p;
       cinBtn.textContent='▶  CINEMATIC  TOUR';cinBtn.style.background='rgba(0,0,0,.80)';
+      window.dispatchEvent(new CustomEvent('cinematicChange',{detail:{active:false}}));
     };
 
     // Auto-start music when cinematic starts
@@ -3163,94 +3165,169 @@ function App(){
       h('div',{style:{color:'rgba(255,255,255,.38)',fontSize:10,marginTop:1}},zCtx[2])),
 
     // ── LEFT SIDEBAR ─────────────────────────────────────────────────────────
-    h('div',{style:{position:'fixed',left:14,top:'50%',transform:'translateY(-50%)',zIndex:100,display:'flex',flexDirection:'column',gap:2,maxHeight:'88vh',overflowY:'auto',paddingRight:4,width:168,animation:'fadeIn 1s ease .5s both'}},
+    // ── COLLAPSIBLE LEFT SIDEBAR ─────────────────────────────────────────────
+    h('div',{style:{position:'fixed',left:0,top:'50%',transform:'translateY(-50%)',zIndex:150,display:'flex',alignItems:'stretch',pointerEvents:'none'}},
 
-      // KM/MI toggle
-      h('div',{onClick:()=>setMetric(!metric),style:{display:'flex',marginBottom:4,background:'rgba(0,0,0,.75)',borderRadius:20,border:'1px solid rgba(255,255,255,.10)',overflow:'hidden',cursor:'pointer',alignSelf:'center'}},
-        ['KM','MI'].map(u=>h('div',{key:u,style:{padding:'3px 12px',fontSize:9,fontFamily:"'Cinzel',serif",fontWeight:700,color:(u==='KM')===metric?'white':'rgba(255,255,255,.28)',background:(u==='KM')===metric?'rgba(100,140,255,.25)':'transparent',transition:'all .2s'}},u))),
+      // ── SIDEBAR DRAWER ─────────────────────────────────────────────────────
+      h('div',{style:{
+        width: sidebarOpen ? 178 : 0,
+        overflow:'hidden',
+        transition:'width .32s cubic-bezier(.4,0,.2,1)',
+        pointerEvents: sidebarOpen ? 'all' : 'none',
+        display:'flex',
+        flexDirection:'column',
+      }},
+        h('div',{style:{
+          width:178,
+          maxHeight:'88vh',
+          overflowY:'auto',
+          overflowX:'hidden',
+          display:'flex',
+          flexDirection:'column',
+          gap:2,
+          paddingRight:4,
+          paddingLeft:8,
+          paddingTop:4,
+          paddingBottom:8,
+          background:'linear-gradient(135deg,rgba(2,4,18,.92) 0%,rgba(4,6,24,.88) 100%)',
+          borderRight:'1px solid rgba(255,255,255,.07)',
+          borderRadius:'0 16px 16px 0',
+          boxShadow:'4px 0 32px rgba(0,0,0,.60)',
+          backdropFilter:'blur(20px)',
+          scrollbarWidth:'thin',
+          scrollbarColor:'rgba(255,255,255,.12) transparent',
+        }},
 
-      // ── PLANETS ──
-      h('div',{style:{color:'rgba(255,255,255,.22)',fontSize:7.5,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'2px 4px',marginBottom:1}},'PLANETS'),
-      PD.map(p=>{
-        const isExp=expP===p.id,isSel=sel&&sel.id===p.id;
-        return h('div',{key:p.id},
-          h('div',{style:{display:'flex',alignItems:'center'}},
-            h('button',{onClick:()=>{handleBodySel(p);if(!(p.moonList||p.moonData).length)return;if(!isExp)setExpP(p.id);},
-              style:{flex:1,display:'flex',alignItems:'center',gap:7,padding:'5px 9px',
-                borderRadius:(p.moonList||p.moonData).length?'18px 0 0 18px':18,
-                cursor:'pointer',fontSize:11,fontFamily:"'Cinzel',serif",
-                background:isSel?p.color+'28':'rgba(0,0,0,.55)',
-                border:isSel?'1px solid '+p.color+'70':'1px solid rgba(255,255,255,.06)',
-                borderRight:(p.moonList||p.moonData).length?'none':undefined,
-                color:isSel?p.glow:'rgba(255,255,255,.55)',
-                backdropFilter:'blur(12px)',transition:'all .2s'}},
-              h('div',{style:{width:8,height:8,borderRadius:'50%',background:p.color,flexShrink:0}}),
-              h('span',{style:{flex:1,textAlign:'left'}},p.name),
-              h('span',{style:{fontSize:8,color:p.color+'70'}},p.sym)),
-            p.moonData.length>0&&h('button',{onClick:()=>setExpP(isExp?null:p.id),
-              style:{padding:'5px 7px',borderRadius:'0 18px 18px 0',background:isSel?p.color+'28':'rgba(0,0,0,.55)',border:isSel?'1px solid '+p.color+'70':'1px solid rgba(255,255,255,.06)',borderLeft:'1px solid rgba(255,255,255,.08)',color:'rgba(255,255,255,.35)',fontSize:9,cursor:'pointer',backdropFilter:'blur(12px)'}},isExp?'▲':'▼')),
-          isExp&&p.moonData.length>0&&h('div',{style:{marginLeft:16,marginTop:2,display:'flex',flexDirection:'column',gap:2,borderLeft:'2px solid '+p.color+'25',paddingLeft:8}},
-            (p.moonList||p.moonData).map(m=>{
-              const is3d=p.moonData.some(md=>md.name===m.name);
-              const mSel=sel&&sel.name===m.name;
-              const mc=m.color||p.color;
-              return h('button',{key:m.name,
-                onClick:()=>is3d?handleBodySel({...p.moonData.find(md=>md.name===m.name),isMoon:true,parentPlanet:p.name}):handleBodySel({...m,isMoon:true,parentPlanet:p.name,color:p.color,glow:p.glow,type:'Moon'}),
-                style:{display:'flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:14,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:mSel?mc+'22':'rgba(0,0,0,.45)',border:mSel?'1px solid '+mc+'55':'1px solid rgba(255,255,255,.04)',color:mSel?mc:'rgba(255,255,255,.38)',backdropFilter:'blur(8px)',transition:'all .2s',opacity:is3d?1:.7}},
-                h('div',{style:{width:5,height:5,borderRadius:'50%',background:is3d?mc:mc+'55',flexShrink:0,boxShadow:is3d?'0 0 4px '+mc:'none'}}),
-                m.name,
-                is3d&&h('span',{style:{fontSize:7,color:mc,marginLeft:'auto',opacity:.6}},'3D'),
-                m.water&&m.water.includes('CONFIRMED')&&h('span',{style:{fontSize:8,color:'#66aaff',marginLeft:'auto'}},'💧'))})));
-      }),
+          // KM/MI toggle
+          h('div',{onClick:()=>setMetric(!metric),style:{display:'flex',marginBottom:4,background:'rgba(0,0,0,.75)',borderRadius:20,border:'1px solid rgba(255,255,255,.10)',overflow:'hidden',cursor:'pointer',alignSelf:'center'}},
+            ['KM','MI'].map(u=>h('div',{key:u,style:{padding:'3px 12px',fontSize:9,fontFamily:"'Cinzel',serif",fontWeight:700,color:(u==='KM')===metric?'white':'rgba(255,255,255,.28)',background:(u==='KM')===metric?'rgba(100,140,255,.25)':'transparent',transition:'all .2s'}},u))),
 
-      h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
+          // ── PLANETS ──
+          h('div',{style:{color:'rgba(255,255,255,.22)',fontSize:7.5,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'2px 4px',marginBottom:1}},'PLANETS'),
+          PD.map(p=>{
+            const isExp=expP===p.id,isSel=sel&&sel.id===p.id;
+            return h('div',{key:p.id},
+              h('div',{style:{display:'flex',alignItems:'center'}},
+                h('button',{onClick:()=>{handleBodySel(p);if(!(p.moonList||p.moonData).length)return;if(!isExp)setExpP(p.id);},
+                  style:{flex:1,display:'flex',alignItems:'center',gap:7,padding:'5px 9px',
+                    borderRadius:(p.moonList||p.moonData).length?'18px 0 0 18px':18,
+                    cursor:'pointer',fontSize:11,fontFamily:"'Cinzel',serif",
+                    background:isSel?p.color+'28':'rgba(0,0,0,.55)',
+                    border:isSel?'1px solid '+p.color+'70':'1px solid rgba(255,255,255,.06)',
+                    borderRight:(p.moonList||p.moonData).length?'none':undefined,
+                    color:isSel?p.glow:'rgba(255,255,255,.55)',
+                    backdropFilter:'blur(12px)',transition:'all .2s'}},
+                  h('div',{style:{width:8,height:8,borderRadius:'50%',background:p.color,flexShrink:0}}),
+                  h('span',{style:{flex:1,textAlign:'left'}},p.name),
+                  h('span',{style:{fontSize:8,color:p.color+'70'}},p.sym)),
+                p.moonData.length>0&&h('button',{onClick:()=>setExpP(isExp?null:p.id),
+                  style:{padding:'5px 7px',borderRadius:'0 18px 18px 0',background:isSel?p.color+'28':'rgba(0,0,0,.55)',border:isSel?'1px solid '+p.color+'70':'1px solid rgba(255,255,255,.06)',borderLeft:'1px solid rgba(255,255,255,.08)',color:'rgba(255,255,255,.35)',fontSize:9,cursor:'pointer',backdropFilter:'blur(12px)'}},isExp?'▲':'▼')),
+              isExp&&p.moonData.length>0&&h('div',{style:{marginLeft:16,marginTop:2,display:'flex',flexDirection:'column',gap:2,borderLeft:'2px solid '+p.color+'25',paddingLeft:8}},
+                (p.moonList||p.moonData).map(m=>{
+                  const is3d=p.moonData.some(md=>md.name===m.name);
+                  const mSel=sel&&sel.name===m.name;
+                  const mc=m.color||p.color;
+                  return h('button',{key:m.name,
+                    onClick:()=>is3d?handleBodySel({...p.moonData.find(md=>md.name===m.name),isMoon:true,parentPlanet:p.name}):handleBodySel({...m,isMoon:true,parentPlanet:p.name,color:p.color,glow:p.glow,type:'Moon'}),
+                    style:{display:'flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:14,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:mSel?mc+'22':'rgba(0,0,0,.45)',border:mSel?'1px solid '+mc+'55':'1px solid rgba(255,255,255,.04)',color:mSel?mc:'rgba(255,255,255,.38)',backdropFilter:'blur(8px)',transition:'all .2s',opacity:is3d?1:.7}},
+                    h('div',{style:{width:5,height:5,borderRadius:'50%',background:is3d?mc:mc+'55',flexShrink:0,boxShadow:is3d?'0 0 4px '+mc:'none'}}),
+                    m.name,
+                    is3d&&h('span',{style:{fontSize:7,color:mc,marginLeft:'auto',opacity:.6}},'3D'),
+                    m.water&&m.water.includes('CONFIRMED')&&h('span',{style:{fontSize:8,color:'#66aaff',marginLeft:'auto'}},'💧'));})));
+          }),
 
-      // ── SPACE TELESCOPES ──
-      SectionHdr('TELESCOPES','telescopes','🔭','#aa88ff'),
-      expSection.telescopes&&TELESCOPES.map(t=>MiniBtn(t.name,t.color,()=>openTelescope(t),selTelescope&&selTelescope.id===t.id,t.status.includes('Active')?'active':'done','🔭')),
+          h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
 
-      h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
+          // ── SPACE TELESCOPES ──
+          SectionHdr('TELESCOPES','telescopes','🔭','#aa88ff'),
+          expSection.telescopes&&TELESCOPES.map(t=>MiniBtn(t.name,t.color,()=>openTelescope(t),selTelescope&&selTelescope.id===t.id,t.status.includes('Active')?'active':'done','🔭')),
 
-      // ── SPACECRAFT ──
-      SectionHdr('SPACECRAFT','spacecraft',null,'rgba(255,255,255,.22)'),
-      expSection.spacecraft&&h(Fragment,null,
-        PROBES.filter(p=>p.status.includes('Active')).map(pr=>h('button',{key:pr.id,
-          onClick:()=>handleBodySel({...pr,moonData:[],isMission:true}),
-          style:{display:'flex',alignItems:'center',gap:7,padding:'5px 9px',borderRadius:18,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:'rgba(0,30,15,.6)',border:'1px solid rgba(0,200,100,.12)',color:pr.color,backdropFilter:'blur(12px)',marginBottom:2,width:'100%'}},
-          h('div',{style:{width:6,height:6,borderRadius:'50%',background:pr.color,flexShrink:0}}),
-          h('span',{style:{flex:1,textAlign:'left'}},pr.name),
-          h('span',{style:{fontSize:7,color:'#33ee77'}},'●'))),
-        PROBES.filter(p=>!p.status.includes('Active')).map(pr=>h('button',{key:pr.id,
-          onClick:()=>handleBodySel({...pr,moonData:[],isMission:true}),
-          style:{display:'flex',alignItems:'center',gap:7,padding:'5px 9px',borderRadius:18,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:'rgba(0,0,0,.50)',border:'1px solid rgba(255,255,255,.05)',color:pr.color+'99',backdropFilter:'blur(12px)',marginBottom:2,width:'100%'}},
-          h('div',{style:{width:6,height:6,borderRadius:'50%',background:pr.color,opacity:.55,flexShrink:0}}),
-          h('span',{style:{flex:1,textAlign:'left'}},pr.name),
-          h('span',{style:{fontSize:7,color:'rgba(255,255,255,.25)'}},'✓')))),
+          h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
 
-      h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
+          // ── SPACECRAFT ──
+          SectionHdr('SPACECRAFT','spacecraft',null,'rgba(255,255,255,.22)'),
+          expSection.spacecraft&&h(Fragment,null,
+            PROBES.filter(p=>p.status.includes('Active')).map(pr=>h('button',{key:pr.id,
+              onClick:()=>handleBodySel({...pr,moonData:[],isMission:true}),
+              style:{display:'flex',alignItems:'center',gap:7,padding:'5px 9px',borderRadius:18,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:'rgba(0,30,15,.6)',border:'1px solid rgba(0,200,100,.12)',color:pr.color,backdropFilter:'blur(12px)',marginBottom:2,width:'100%'}},
+              h('div',{style:{width:6,height:6,borderRadius:'50%',background:pr.color,flexShrink:0}}),
+              h('span',{style:{flex:1,textAlign:'left'}},pr.name),
+              h('span',{style:{fontSize:7,color:'#33ee77'}},'●'))),
+            PROBES.filter(p=>!p.status.includes('Active')).map(pr=>h('button',{key:pr.id,
+              onClick:()=>handleBodySel({...pr,moonData:[],isMission:true}),
+              style:{display:'flex',alignItems:'center',gap:7,padding:'5px 9px',borderRadius:18,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:'rgba(0,0,0,.50)',border:'1px solid rgba(255,255,255,.05)',color:pr.color+'99',backdropFilter:'blur(12px)',marginBottom:2,width:'100%'}},
+              h('div',{style:{width:6,height:6,borderRadius:'50%',background:pr.color,opacity:.55,flexShrink:0}}),
+              h('span',{style:{flex:1,textAlign:'left'}},pr.name),
+              h('span',{style:{fontSize:7,color:'rgba(255,255,255,.25)'}},'✓')))),
 
-      // ── MARS ──
-      SectionHdr('MARS MISSIONS','mars','🔴','#ff7744'),
-      expSection.mars&&h(Fragment,null,
-        h('div',{style:{color:'rgba(255,120,80,.45)',fontSize:7,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'1px 6px',marginBottom:2}},'ORBITERS'),
-        MARS_MISSIONS.filter(m=>m.category==='orbiter').map(m=>MiniBtn(m.name,m.color,()=>openMars(m),selMars&&selMars.id===m.id,m.status.includes('Active')?'active':'done','🛰️')),
-        h('div',{style:{color:'rgba(255,120,80,.45)',fontSize:7,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'1px 6px',marginTop:4,marginBottom:2}},'ROVERS & LANDERS'),
-        MARS_MISSIONS.filter(m=>m.category==='lander').map(m=>MiniBtn(m.name,m.color,()=>openMars(m),selMars&&selMars.id===m.id,m.status.includes('Active')?'active':m.status.includes('Completed')?'done':'done','🤖'))),
+          h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
 
-      h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
+          // ── MARS ──
+          SectionHdr('MARS MISSIONS','mars','🔴','#ff7744'),
+          expSection.mars&&h(Fragment,null,
+            h('div',{style:{color:'rgba(255,120,80,.45)',fontSize:7,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'1px 6px',marginBottom:2}},'ORBITERS'),
+            MARS_MISSIONS.filter(m=>m.category==='orbiter').map(m=>MiniBtn(m.name,m.color,()=>openMars(m),selMars&&selMars.id===m.id,m.status.includes('Active')?'active':'done','🛰️')),
+            h('div',{style:{color:'rgba(255,120,80,.45)',fontSize:7,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'1px 6px',marginTop:4,marginBottom:2}},'ROVERS & LANDERS'),
+            MARS_MISSIONS.filter(m=>m.category==='lander').map(m=>MiniBtn(m.name,m.color,()=>openMars(m),selMars&&selMars.id===m.id,m.status.includes('Active')?'active':m.status.includes('Completed')?'done':'done','🤖'))),
 
-      // ── MOON LANDERS ──
-      SectionHdr('MOON LANDERS','moon','🌙','#c8c0a8'),
-      expSection.moon&&MOON_LANDERS.map(m=>MiniBtn(m.name,m.color,()=>openMoon(m),selMoon&&selMoon.id===m.id,m.status==='Active'?'active':'done',m.country?m.country.slice(-2):'🌙')),
+          h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
 
-      h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
+          // ── MOON LANDERS ──
+          SectionHdr('MOON LANDERS','moon','🌙','#c8c0a8'),
+          expSection.moon&&MOON_LANDERS.map(m=>MiniBtn(m.name,m.color,()=>openMoon(m),selMoon&&selMoon.id===m.id,m.status==='Active'?'active':'done',m.country?m.country.slice(-2):'🌙')),
 
-      // ── SPECIAL OBJECTS ──
-      h('div',{style:{color:'rgba(255,255,255,.22)',fontSize:7.5,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'2px 4px',marginBottom:1}},'SPECIAL OBJECTS'),
-      SPECIALS.map(sp=>h('button',{key:sp.id,onClick:()=>handleBodySel({...sp,moonData:[]}),
-        style:{display:'flex',alignItems:'center',gap:7,padding:'5px 9px',borderRadius:18,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:'rgba(0,0,0,.50)',border:'1px solid '+(sp.color+'18'),color:sp.color,backdropFilter:'blur(12px)',marginBottom:2,width:'100%'}},
-        h('div',{style:{width:7,height:7,borderRadius:sp.id==='sedna'?'50%':'1px',background:sp.color,flexShrink:0,transform:sp.id!=='sedna'?'rotate(45deg)':'none'}}),sp.name))),
+          h('div',{style:{height:1,background:'rgba(255,255,255,.06)',margin:'4px 0'}}),
 
+          // ── SPECIAL OBJECTS ──
+          h('div',{style:{color:'rgba(255,255,255,.22)',fontSize:7.5,letterSpacing:2,fontFamily:"'Cinzel',serif",padding:'2px 4px',marginBottom:1}},'SPECIAL OBJECTS'),
+          SPECIALS.map(sp=>h('button',{key:sp.id,onClick:()=>handleBodySel({...sp,moonData:[]}),
+            style:{display:'flex',alignItems:'center',gap:7,padding:'5px 9px',borderRadius:18,cursor:'pointer',fontSize:10,fontFamily:"'Cinzel',serif",background:'rgba(0,0,0,.50)',border:'1px solid '+(sp.color+'18'),color:sp.color,backdropFilter:'blur(12px)',marginBottom:2,width:'100%'}},
+            h('div',{style:{width:7,height:7,borderRadius:sp.id==='sedna'?'50%':'1px',background:sp.color,flexShrink:0,transform:sp.id!=='sedna'?'rotate(45deg)':'none'}}),sp.name))),
+      ),
+
+      // ── PULL TAB — always visible, glows to hint at sidebar ───────────────
+      // Hidden during cinematic so nothing blocks the view
+      !cinematicActive && h('button',{
+        onClick:()=>setSidebarOpen(o=>!o),
+        title: sidebarOpen ? 'Hide menu' : 'Show menu',
+        style:{
+          pointerEvents:'all',
+          alignSelf:'center',
+          display:'flex',
+          flexDirection:'column',
+          alignItems:'center',
+          justifyContent:'center',
+          gap: 3,
+          width: 18,
+          height: 72,
+          marginLeft: sidebarOpen ? 0 : 0,
+          background: sidebarOpen
+            ? 'rgba(255,255,255,.07)'
+            : 'linear-gradient(180deg,rgba(80,140,255,.18) 0%,rgba(120,80,255,.22) 100%)',
+          border: sidebarOpen
+            ? '1px solid rgba(255,255,255,.10)'
+            : '1px solid rgba(100,160,255,.35)',
+          borderLeft: sidebarOpen ? '1px solid rgba(255,255,255,.06)' : '1px solid rgba(100,160,255,.30)',
+          borderRadius:'0 10px 10px 0',
+          cursor:'pointer',
+          transition:'all .32s ease',
+          boxShadow: sidebarOpen ? 'none' : '2px 0 18px rgba(80,140,255,.28), 0 0 8px rgba(100,160,255,.15)',
+          backdropFilter:'blur(12px)',
+        }},
+        // Three chevron lines
+        ...[0,1,2].map(i=>h('div',{key:i,style:{
+          width:4,
+          height:4,
+          borderRight:'1.5px solid '+(sidebarOpen?'rgba(255,255,255,.30)':'rgba(130,180,255,.80)'),
+          borderTop:'1.5px solid '+(sidebarOpen?'rgba(255,255,255,.30)':'rgba(130,180,255,.80)'),
+          transform: sidebarOpen ? 'rotate(-135deg)' : 'rotate(45deg)',
+          transition:'transform .32s ease',
+          borderRadius:'0 2px 0 0',
+        }})),
+      ),
+    ),
+
+    // ── RIGHT SIDEBAR — Distance Button
     // ── RIGHT SIDEBAR — Distance Button ─────────────────────────────────────
     h('div',{style:{position:'fixed',right:14,bottom:80,zIndex:100,animation:'fadeIn 1s ease .5s both'}},
       h('button',{onClick:openDist,
